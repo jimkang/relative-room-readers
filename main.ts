@@ -6,13 +6,16 @@ import seedrandom from 'seedrandom';
 import RandomId from '@jimkang/randomid';
 import { createProbable as Probable } from 'probable';
 import OLPE from 'one-listener-per-element';
-import { getAudioBufferFromFile } from 'synthskel/tasks/get-audio-buffer-from-file';
 import ContextKeeper from 'audio-context-singleton';
 import { renderBoard } from './renderers/render-board';
-import { Player } from './types';
+import { Player, MusicEvent } from './types';
 import { range } from 'd3-array';
+import { downloadSamples } from 'synthskel/tasks/download-samples';
+import math from 'basic-2d-math';
+import { tonalityDiamondPitches } from 'synthskel/tonality-diamond';
 
 const abc = 'abcdefghijklmnopqrstuvwxyz';
+var sampleBuffers: AudioBuffer[];
 var randomId = RandomId();
 var { on } = OLPE();
 var { getCurrentContext } = ContextKeeper();
@@ -29,7 +32,6 @@ var segmentInput: HTMLInputElement = document.getElementById(
 var silenceInput: HTMLInputElement = document.getElementById(
   'silence-field'
 ) as HTMLInputElement;
-var srcAudioBuffer;
 var players: Player[] = [];
 
 (async function go() {
@@ -56,7 +58,33 @@ async function onUpdate(
   prob = Probable({ random });
   prob.roll(2);
 
-  wireControls(Object.assign({ onFileChange, onAddPlayer }, state));
+  var ctx;
+  try {
+    ctx = await new Promise((resolve, reject) =>
+      getCurrentContext((error, ctx) => (error ? reject(error) : resolve(ctx)))
+    );
+    if (!sampleBuffers || sampleBuffers.length < 1) {
+      sampleBuffers = await new Promise((resolve, reject) =>
+        downloadSamples(
+          {
+            ctx,
+            baseURL: 'samples',
+            sampleFiles: [
+              'trumpet-D2.wav',
+              'glass-less-full.wav',
+              'timpani-d.wav',
+              'Vibraphone.sustain.ff.D4.wav',
+            ],
+          },
+          (error, buffers) => (error ? reject(error) : resolve(buffers))
+        )
+      );
+    }
+  } catch (error) {
+    handleError(error);
+  }
+
+  wireControls({ onFileChange, onAddPlayer, onPlay });
   renderBoard({ players, onUpdatePlayer });
 }
 
@@ -64,27 +92,65 @@ function onUpdatePlayer() {
   urlStore.update({ players });
 }
 
-function wireControls({
-  onFileChange,
-  // onScramble,
-  segmentCount,
-  silenceSeconds,
-}) {
-  segmentInput.value = segmentCount;
-  silenceInput.value = silenceSeconds;
-
+function wireControls({ onFileChange, onAddPlayer, onPlay }) {
   on('#file', 'change', onFileChange);
   on('#add-button', 'click', onAddPlayer);
+  on('#play-button', 'click', onPlay);
 }
 
 function onAddPlayer() {
-  players.push({
-    id: 'player-' + randomId(4),
-    label: getLabel(players.length),
-    position: { x: 25, y: 25 },
-    uiState: { selected: false },
-  });
+  players.push(
+    fixPlayer({
+      id: 'player-' + randomId(4),
+      label: getLabel(players.length),
+      position: { x: 25, y: 25 },
+      uiState: { selected: false },
+      sampleIndex: 0,
+      pan: 0,
+      amp: 0.5,
+      evaluationWindowSizeInEvents: 4,
+      responseStrategyName: 'echo',
+      evaluationWindow: [],
+      hear(you: Player, e: MusicEvent) {
+        you.evaluationWindow.push(e);
+        if (you.evaluationWindow.length >= you.evaluationWindowSizeInEvents) {
+          you.respond(you, you.evaluationWindow);
+          you.evaluationWindow.length = 0;
+        }
+        console.log(you.id, 'heard', e);
+      },
+      respond(you: Player, events: MusicEvent[]) {
+        if (you.responseStrategyName === 'echo') {
+          // TODO: Timing.
+          events.forEach((event) => playToOthers(you, event));
+        }
+      },
+      start(you: Player) {
+        var events = prob
+          .shuffle(tonalityDiamondPitches.slice(0, 8))
+          .slice(0, 4)
+          .map((pitch) => ({
+            senderId: you.id,
+            pitch,
+            lengthSeconds: 0.5,
+            metaMessage: 'Start bar',
+          }));
+        events.forEach((event) => playToOthers(you, event));
+      },
+    })
+  );
+
   urlStore.update({ players });
+}
+
+function playToOthers(sender: Player, event: MusicEvent) {
+  var others = players.filter((player) => player.id !== sender.id);
+  others.forEach((player) =>
+    setTimeout(
+      () => player.hear(player, event),
+      timeForDistance(sender, player)
+    )
+  );
 }
 
 async function onFileChange() {
@@ -92,13 +158,20 @@ async function onFileChange() {
     return;
   }
 
-  try {
-    srcAudioBuffer = await getAudioBufferFromFile({
-      file: fileInput.files[0],
-    });
-    // TODO: Impl. urlStore ephemeral state, put it thes.
-  } catch (error) {
-    handleError(error);
+  //   try {
+  //     srcAudioBuffer = await getAudioBufferFromFile({
+  //       file: fileInput.files[0],
+  //     });
+  //     // TODO: Impl. urlStore ephemeral state, put it thes.
+  //   } catch (error) {
+  //     handleError(error);
+  //   }
+}
+
+function onPlay() {
+  var selectedPlayers = players.filter((player) => player.uiState.selected);
+  if (selectedPlayers.length > 0) {
+    selectedPlayers[0].start(selectedPlayers[0]);
   }
 }
 
@@ -120,6 +193,18 @@ function getLabel(index) {
   return range(count)
     .map(() => letter)
     .join();
+}
+
+function timeForDistance(a: Player, b: Player) {
+  return (
+    1000 *
+    math.getVectorMagnitude(
+      math.subtractPairs(
+        [a.position.x, a.position.y],
+        [b.position.x, b.position.y]
+      )
+    )
+  );
 }
 
 function reportTopLevelError(event: ErrorEvent) {

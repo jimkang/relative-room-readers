@@ -12,13 +12,20 @@ export interface Player {
   label: string;
   position: Pt;
   uiState: UIState;
-  // evaluationWindowInTicks
-  // responseStrategyForWindow;
-  // play(tick)
+  sampleIndex?: number;
+  pan: number;
+  amp: number;
+  evaluationWindow: MusicEvent[];
+  evaluationWindowSizeInEvents: number;
+  responseStrategyName?: string;
+  hear: (you: Player, event: MusicEvent) => void;
+  respond: (you: Player, events: MusicEvent[]) => void;
+  start: (you: Player) => void;
 }
 
 export interface MusicEvent {
   senderId: string;
-  pitches: number[];
+  pitch: number;
+  lengthSeconds: number;
   metaMessage: string;
 }

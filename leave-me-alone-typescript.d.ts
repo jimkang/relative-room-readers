@@ -13,3 +13,4 @@ declare module 'd3-zoom';
 declare module 'accessor';
 declare module 'audio-context-singleton';
 declare module './renderers/*';
+declare module 'synthskel';

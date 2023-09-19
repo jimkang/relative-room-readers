@@ -19,6 +19,7 @@
     "accessor": "^3.0.0",
     "audio-context-singleton": "^1.2.4",
     "audiobuffer-to-wav": "^1.0.0",
+    "basic-2d-math": "^1.0.1",
     "d3-array": "^3.2.4",
     "d3-drag": "^3.0.0",
     "d3-ease": "^3.0.1",
