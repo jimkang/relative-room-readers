@@ -67,6 +67,7 @@ export function renderBoard({
     var currentPlayers = newPlayers.merge(playerSel);
     currentPlayers.attr('transform', getTransform);
     currentPlayers.classed('selected', isSelected);
+    currentPlayers.select('.name').text(accessor('label'));
 
     return currentPlayers;
 

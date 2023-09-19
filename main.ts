@@ -10,7 +10,9 @@ import { getAudioBufferFromFile } from 'synthskel/tasks/get-audio-buffer-from-fi
 import ContextKeeper from 'audio-context-singleton';
 import { renderBoard } from './renderers/render-board';
 import { Player } from './types';
+import { range } from 'd3-array';
 
+const abc = 'abcdefghijklmnopqrstuvwxyz';
 var randomId = RandomId();
 var { on } = OLPE();
 var { getCurrentContext } = ContextKeeper();
@@ -78,6 +80,7 @@ function wireControls({
 function onAddPlayer() {
   players.push({
     id: 'player-' + randomId(4),
+    label: getLabel(players.length),
     position: { x: 25, y: 25 },
     uiState: { selected: false },
   });
@@ -109,6 +112,14 @@ function fixPlayer(player: Player) {
         (player.uiState.selected as unknown as string) !== 'false',
     },
   });
+}
+
+function getLabel(index) {
+  const letter = abc[index % abc.length];
+  const count = Math.floor(index / abc.length) + 1;
+  return range(count)
+    .map(() => letter)
+    .join();
 }
 
 function reportTopLevelError(event: ErrorEvent) {

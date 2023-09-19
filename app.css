@@ -87,13 +87,16 @@ a:visited {
   fill: #fff;
 }
 
-.artist-text {
-  font-size: 80px;
+.name-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.title-text {
+.name {
   font-family: Albert Sans, sans-serif;
-  font-size: 120px;
+  font-size: 6px;
+  color: white;
 }
 
 @media all and (max-height: 568px) {

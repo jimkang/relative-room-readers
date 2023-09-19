@@ -9,6 +9,7 @@ export interface UIState {
 
 export interface Player {
   id: string;
+  label: string;
   position: Pt;
   uiState: UIState;
   // evaluationWindowInTicks
