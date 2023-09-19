@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Relative Room Readers</title>
+  </head>
+  <body>
+    <div id="status-message" class="hidden"></div>
+
+    <svg width="70%" height="95vmin" viewBox="0 0 100 100" class="board">
+      <defs></defs>
+      <g class="zoom-root">
+        <g class="player-root"></g>
+      </g>
+    </svg>
+
+    <div>
+      You can pan around the board by dragging. You can zoom in and out with
+      either the mouse wheel or pinching.
+    </div>
+
+    <label for="file">Audio file</label>
+    <input id="file" class="input-source" type="file" accept="audio/*, .m4a,.ogg,.mp3,.wav" />
+    <div class="source-audio-container">
+      <audio class="source-audio-player" controls></audio>
+    </div>
+
+    <label for="segment-count-field">Number of segments to relative-room-readers into:</label>
+    <input id="segment-count-field" type="number"></input>
+    <label for="silence-field">Number of seconds the silence gap should be when the resulting relative-room-readersd clips are concatenated:</label>
+    <input id="silence-field" type="number"></input>
+
+    <button id="add-button">Add player</button>
+    <button id="play-button">Play</button>
+
+    <ul id="relative-room-readers-results-list">
+    </ul>
+
+    <div id="version-info"></div>
+
+    <script type="module" src="main.ts"></script>
+  </body>
+</html>

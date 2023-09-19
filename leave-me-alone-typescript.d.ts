@@ -1,0 +1,15 @@
+declare module 'route-state';
+declare module 'handle-error-web';
+declare module 'seedrandom';
+declare module 'probable';
+declare module '@jimkang/randomid';
+declare module '@jimkang/url-store';
+declare module 'one-listener-per-element';
+declare module 'd3-array';
+declare module 'd3-ease';
+declare module 'd3-selection';
+declare module 'd3-drag';
+declare module 'd3-zoom';
+declare module 'accessor';
+declare module 'audio-context-singleton';
+declare module './renderers/*';

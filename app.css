@@ -1,0 +1,103 @@
+body {
+  font-size: 24px;
+  font-family: Helvetica, sans-serif;
+  margin: 0;
+  margin-bottom: 2rem;
+  margin: 0;
+  margin-bottom: 2rem;
+  --time-blue: hsla(211, 70%, 50%, 0.6);
+  --time-blue-ghostly: hsla(211, 70%, 50%, 0.3);
+  --time-blue-dim: hsla(211, 70%, 50%, 0.1);
+  --ring: hsla(211, 70%, 50%, 0.95);
+  --diagnostic-line: hsla(44, 70%, 50%, 0.959);
+}
+
+.invisible {
+  visibility: hidden;
+}
+
+#status-message {
+  background-color: hsla(0, 100%, 50%, 0.8);
+  margin: 1rem;
+  padding: 1rem;
+  text-shadow: none;
+}
+
+ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+button {
+  font-size: 1.2em;
+  cursor: pointer;
+  padding: 0.5em;
+  border-radius: 0.5em;
+  border-width: 8px;
+  border-color: #333;
+  border-style: solid;
+  background-color: #fff;
+  min-width: 44px;
+}
+
+.outer-container {
+  display: flex;
+}
+
+a:link {
+  color: #222;
+  font-weight: 700;
+}
+
+a:visited {
+  color: #ddd;
+}
+
+#version-info {
+  position: absolute;
+  right: 1.5em;
+  top: 1.5em;
+  font-size: 0.5em;
+  color: #666;
+}
+
+.hidden {
+  opacity: 0;
+  transition: opacity 1s;
+  display: none;
+}
+
+.axial-path {
+  stroke: hsl(211, 40%, 70%);
+  stroke-width: 2;
+  fill: none;
+}
+
+.ring {
+  fill: none;
+  /* stroke: var(--time-blue); */
+}
+
+.board {
+  border: 1px solid #555;
+}
+
+.text {
+  font-family: Roboto, Sans, sans-serif;
+  fill: #fff;
+}
+
+.artist-text {
+  font-size: 80px;
+}
+
+.title-text {
+  font-family: Albert Sans, sans-serif;
+  font-size: 120px;
+}
+
+@media all and (max-height: 568px) {
+  body {
+    font-size: 18px;
+  }
+}
