@@ -46,7 +46,9 @@ async function onUpdate(
   state: Record<string, unknown>
   //  ephemeralState: Record<string, unknown>
 ) {
-  players = ((state.players as Player[]) || []).map(fixPlayer);
+  players = ((state.players as unknown[]) || [])
+    .map(fixPlayer)
+    .map(addPlayerMethods);
   console.log('Deserialized players:', players);
   // players[0].uiState.selected = true;
   // console.log('Deserialized players:', players);
@@ -96,51 +98,29 @@ function wireControls({ onFileChange, onAddPlayer, onPlay }) {
 
 function onAddPlayer() {
   players.push(
-    fixPlayer({
-      id: 'player-' + randomId(4),
-      label: getLabel(players.length),
-      position: { x: 25, y: 25 },
-      uiState: { selected: false },
-      sampleIndex: 0,
-      pan: 0,
-      amp: 0.5,
-      evaluationWindowSizeInEvents: 4,
-      responseStrategyName: 'echo',
-      evaluationWindow: [],
-      hear(you: Player, e: MusicEvent) {
-        you.evaluationWindow.push(e);
-        if (you.evaluationWindow.length >= you.evaluationWindowSizeInEvents) {
-          you.respond(you, you.evaluationWindow);
-          you.evaluationWindow.length = 0;
-        }
-        console.log(you.id, 'heard', e);
-      },
-      respond(you: Player, events: MusicEvent[]) {
-        if (you.responseStrategyName === 'echo') {
-          // TODO: Timing.
-          events.forEach((event) => playToOthers(you, event));
-        }
-      },
-      start(you: Player) {
-        var events = prob
-          .shuffle(tonalityDiamondPitches.slice(0, 8))
-          .slice(0, 4)
-          .map((pitch) => ({
-            senderId: you.id,
-            pitch,
-            lengthSeconds: 0.5,
-            metaMessage: 'Start bar',
-          }));
-        events.forEach((event) => playToOthers(you, event));
-      },
-    })
+    addPlayerMethods(
+      fixPlayer({
+        id: 'player-' + randomId(4),
+        label: getLabel(players.length),
+        position: { x: 25, y: 25 },
+        uiState: { selected: false },
+        sampleIndex: 0,
+        pan: 0,
+        amp: 0.5,
+        evaluationWindowSizeInEvents: 4,
+        responseStrategyName: 'echo',
+        evaluationWindow: [],
+      })
+    )
   );
 
   urlStore.update({ players });
 }
 
 function playToOthers(sender: Player, event: MusicEvent) {
-  var others = players.filter((player) => player.id !== sender.id);
+  var others = (players as Player[]).filter(
+    (player) => player.id !== sender.id
+  );
   others.forEach((player) =>
     setTimeout(
       () => player.hear(player, event),
@@ -165,18 +145,55 @@ async function onFileChange() {
 }
 
 function onPlay() {
-  var selectedPlayers = players.filter((player) => player.uiState.selected);
+  var selectedPlayers = (players as Player[]).filter(
+    (player) => player?.uiState?.selected
+  );
   if (selectedPlayers.length > 0) {
     selectedPlayers[0].start(selectedPlayers[0]);
   }
 }
 
-function fixPlayer(player: Player) {
+function fixPlayer(player) {
   // TODO: Fix nested object bug in url-store.
   return Object.assign(player, {
-    position: { x: +player.position.x, y: +player.position.y },
+    position: {
+      x: +(player?.position?.x || 0),
+      y: +(player?.position?.y || 0),
+    },
     uiState: {
-      selected: JSON.parse(player.uiState.selected as unknown as string),
+      selected: JSON.parse(player?.uiState?.selected as unknown as string),
+    },
+    evaluationWindow: [],
+  });
+}
+
+function addPlayerMethods(player) {
+  return Object.assign(player, {
+    hear(you: Player, e: MusicEvent) {
+      you.evaluationWindow.push(e);
+      if (you.evaluationWindow.length >= you.evaluationWindowSizeInEvents) {
+        you.respond(you, you.evaluationWindow);
+        you.evaluationWindow.length = 0;
+      }
+      console.log(you.id, 'heard', e);
+    },
+    respond(you: Player, events: MusicEvent[]) {
+      if (you.responseStrategyName === 'echo') {
+        // TODO: Timing.
+        events.forEach((event) => playToOthers(you, event));
+      }
+    },
+    start(you: Player) {
+      var events = prob
+        .shuffle(tonalityDiamondPitches.slice(0, 8))
+        .slice(0, 4)
+        .map((pitch) => ({
+          senderId: you.id,
+          pitch,
+          lengthSeconds: 0.5,
+          metaMessage: 'Start bar',
+        }));
+      events.forEach((event) => playToOthers(you, event));
     },
   });
 }
@@ -191,7 +208,7 @@ function getLabel(index) {
 
 function timeForDistance(a: Player, b: Player) {
   return (
-    1000 *
+    10 *
     math.getVectorMagnitude(
       math.subtractPairs(
         [a.position.x, a.position.y],

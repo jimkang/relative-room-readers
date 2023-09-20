@@ -20,7 +20,9 @@ export function renderBoard({
   // var posLastUpdatedTime = 0.0;
   var applyDragBehavior = drag()
     .container(boardSel.node())
-    .on('end', onUpdatePlayers)
+    // To avoid conflicts with click events, do this
+    // update after a delay.
+    .on('end', () => setTimeout(onUpdatePlayers, 300))
     .on('drag', updatePlayerPosition);
 
   renderPlayers({ players }).call(applyDragBehavior);
