@@ -26,12 +26,6 @@ var urlStore;
 var fileInput: HTMLInputElement = document.getElementById(
   'file'
 ) as HTMLInputElement;
-var segmentInput: HTMLInputElement = document.getElementById(
-  'segment-count-field'
-) as HTMLInputElement;
-var silenceInput: HTMLInputElement = document.getElementById(
-  'silence-field'
-) as HTMLInputElement;
 var players: Player[] = [];
 
 (async function go() {
@@ -54,6 +48,8 @@ async function onUpdate(
 ) {
   players = ((state.players as Player[]) || []).map(fixPlayer);
   console.log('Deserialized players:', players);
+  // players[0].uiState.selected = true;
+  // console.log('Deserialized players:', players);
   var random = seedrandom(state.seed);
   prob = Probable({ random });
   prob.roll(2);
@@ -85,10 +81,10 @@ async function onUpdate(
   }
 
   wireControls({ onFileChange, onAddPlayer, onPlay });
-  renderBoard({ players, onUpdatePlayer });
+  renderBoard({ players, onUpdatePlayers });
 }
 
-function onUpdatePlayer() {
+function onUpdatePlayers() {
   urlStore.update({ players });
 }
 
@@ -180,9 +176,7 @@ function fixPlayer(player: Player) {
   return Object.assign(player, {
     position: { x: +player.position.x, y: +player.position.y },
     uiState: {
-      selected:
-        player.uiState.selected &&
-        (player.uiState.selected as unknown as string) !== 'false',
+      selected: JSON.parse(player.uiState.selected as unknown as string),
     },
   });
 }

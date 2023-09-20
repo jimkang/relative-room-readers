@@ -12,16 +12,15 @@ boardSel.call(zoomer);
 
 export function renderBoard({
   players,
-  onUpdatePlayer,
+  onUpdatePlayers,
 }: {
   players: Player[];
-  onUpdatePlayer: (player: Player) => void;
+  onUpdatePlayers: () => void;
 }) {
   // var posLastUpdatedTime = 0.0;
-
   var applyDragBehavior = drag()
     .container(boardSel.node())
-    .on('end', onUpdatePlayer)
+    .on('end', onUpdatePlayers)
     .on('drag', updatePlayerPosition);
 
   renderPlayers({ players }).call(applyDragBehavior);
@@ -74,12 +73,18 @@ export function renderBoard({
     function isSelected(player: Player) {
       return player.uiState.selected;
     }
+  }
 
-    function onClickPlayer(player: Player) {
-      for (let p of players) {
-        p.uiState.selected = p.id === player.id;
-      }
-      onUpdatePlayer(player);
+  // @ts-ignore
+  function onClickPlayer(e, player: Player) {
+    players.length = 2;
+    players.forEach(setSelected);
+    console.log('players going into update:', players);
+    onUpdatePlayers();
+
+    function setSelected(p: Player) {
+      p.uiState.selected = p.id === player.id;
+      console.log(p.id, 'selected:', p.uiState.selected);
     }
   }
 
