@@ -17,7 +17,7 @@ export function renderBoard({
   playerRadius = 4,
 }: {
   players: Player[];
-  onUpdatePlayers: (ps: Player[]) => void;
+  onUpdatePlayers: () => void;
   className?: string;
   playerRadius?: number;
 }) {
@@ -36,8 +36,7 @@ export function renderBoard({
     .enter()
     .append('g')
     .classed(className, true)
-    .classed('chit', true)
-    .on('click', onClickPlayer);
+    .classed('chit', true);
 
   newPlayers
     .append('circle')
@@ -58,10 +57,18 @@ export function renderBoard({
 
   var currentPlayers = newPlayers.merge(playerSel);
   currentPlayers.attr('transform', getTransform);
-  currentPlayers.classed('selected', isSelected);
-  currentPlayers.select('.name').text(accessor('label'));
+  currentPlayers
+    .classed('selected', isSelected)
+    // It is super important to add the onClickPlayer event listener to the
+    // current selection, rather than only when the elements are first created
+    // by .enter(). This is because onClickPlayer uses a this function's closure
+    // to refer to `players`. If you put onClickPlayer on
+    // once when the elements enter, then it will always refer to an old copy
+    // of `players`, even if this function, renderBoard() is called again with a new copy.
+    .on('click', onClickPlayer)
+    .on('drag', updatePlayerPosition);
 
-  currentPlayers.on('drag', updatePlayerPosition);
+  currentPlayers.select('.name').text(accessor('label'));
   currentPlayers.call(applyDragBehavior);
 
   function isSelected(player: Player) {
@@ -72,11 +79,7 @@ export function renderBoard({
   function onClickPlayer(e, player: Player) {
     players.forEach(setSelected);
     // console.log('players going into update:', players);
-    // TODO: Why is it necessary to pass players here to avoid a bug in which
-    // the updates to `selected` do not persist? Shouldn't this `players` be a
-    // reference to the same array that was passed to renderBoard? Where did the copy happen?
-    // Is this event capturing a `players` from a previous call to renderBoard()?
-    onUpdatePlayers(players);
+    onUpdatePlayers();
 
     function setSelected(p: Player) {
       p.uiState.selected = p.id === player.id;

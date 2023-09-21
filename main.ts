@@ -86,10 +86,10 @@ async function onUpdate(
   renderBoard({ players, onUpdatePlayers });
 }
 
-function onUpdatePlayers(updatedPlayers) {
+function onUpdatePlayers() {
   // players uiState is wrong on the second click here.
   // So what is onClickPlayer updating?
-  urlStore.update({ players: updatedPlayers });
+  urlStore.update({ players });
 }
 
 function wireControls({ /*onFileChange,*/ onAddPlayer, onPlay }) {
