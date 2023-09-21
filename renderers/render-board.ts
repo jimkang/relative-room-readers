@@ -13,76 +13,70 @@ boardSel.call(zoomer);
 export function renderBoard({
   players,
   onUpdatePlayers,
+  className = 'player',
+  playerRadius = 4,
 }: {
   players: Player[];
-  onUpdatePlayers: () => void;
+  onUpdatePlayers: (ps: Player[]) => void;
+  className?: string;
+  playerRadius?: number;
 }) {
   // var posLastUpdatedTime = 0.0;
-  var applyDragBehavior = drag()
-    .container(boardSel.node())
-    // To avoid conflicts with click events, do this
-    // update after a delay.
-    .on('end', () => setTimeout(onUpdatePlayers, 300))
-    .on('drag', updatePlayerPosition);
+  var applyDragBehavior = drag().container(boardSel.node());
+  // To avoid conflicts with click events, do this
+  // update after a delay.
+  // .on('end', () => setTimeout(onUpdatePlayers, 300))
 
-  renderPlayers({ players }).call(applyDragBehavior);
+  var playerRoot = select(`.${className}-root`);
+  var playerSel = playerRoot
+    .selectAll('.' + className)
+    .data(players, accessor());
+  playerSel.exit().remove();
+  var newPlayers = playerSel
+    .enter()
+    .append('g')
+    .classed(className, true)
+    .classed('chit', true)
+    .on('click', onClickPlayer);
 
-  function renderPlayers({
-    players,
-    className = 'player',
-    playerRadius = 4,
-  }: {
-    players: Player[];
-    className?: string;
-    playerRadius?: number;
-  }) {
-    var playerRoot = select(`.${className}-root`);
-    var playerSel = playerRoot
-      .selectAll('.' + className)
-      .data(players, accessor());
-    playerSel.exit().remove();
-    var newPlayers = playerSel
-      .enter()
-      .append('g')
-      .classed(className, true)
-      .classed('chit', true)
-      .on('click', onClickPlayer);
+  newPlayers
+    .append('circle')
+    .attr('r', playerRadius)
+    .attr('cx', playerRadius)
+    .attr('cy', playerRadius);
+  newPlayers
+    .append('foreignObject')
+    .attr('width', playerRadius * 2)
+    .attr('height', playerRadius * 2)
+    // Never forget: Using the namespace when appending an html
+    // element to a foreignObject is incredibly important. Without it,
+    // a div will not size itself correctly for its contents.
+    .append('xhtml:div')
+    .classed('name-container', true)
+    .append('xhtml:div')
+    .classed('name', true);
 
-    newPlayers
-      .append('circle')
-      .attr('r', playerRadius)
-      .attr('cx', playerRadius)
-      .attr('cy', playerRadius);
-    newPlayers
-      .append('foreignObject')
-      .attr('width', playerRadius * 2)
-      .attr('height', playerRadius * 2)
-      // Never forget: Using the namespace when appending an html
-      // element to a foreignObject is incredibly important. Without it,
-      // a div will not size itself correctly for its contents.
-      .append('xhtml:div')
-      .classed('name-container', true)
-      .append('xhtml:div')
-      .classed('name', true);
+  var currentPlayers = newPlayers.merge(playerSel);
+  currentPlayers.attr('transform', getTransform);
+  currentPlayers.classed('selected', isSelected);
+  currentPlayers.select('.name').text(accessor('label'));
 
-    var currentPlayers = newPlayers.merge(playerSel);
-    currentPlayers.attr('transform', getTransform);
-    currentPlayers.classed('selected', isSelected);
-    currentPlayers.select('.name').text(accessor('label'));
+  currentPlayers.on('drag', updatePlayerPosition);
+  currentPlayers.call(applyDragBehavior);
 
-    return currentPlayers;
-
-    function isSelected(player: Player) {
-      return player.uiState.selected;
-    }
+  function isSelected(player: Player) {
+    return player.uiState.selected;
   }
 
   // @ts-ignore
   function onClickPlayer(e, player: Player) {
-    players.length = 2;
     players.forEach(setSelected);
-    console.log('players going into update:', players);
-    onUpdatePlayers();
+    // console.log('players going into update:', players);
+    // TODO: Why is it necessary to pass players here to avoid a bug in which
+    // the updates to `selected` do not persist? Shouldn't this `players` be a
+    // reference to the same array that was passed to renderBoard? Where did the copy happen?
+    // Is this event capturing a `players` from a previous call to renderBoard()?
+    onUpdatePlayers(players);
 
     function setSelected(p: Player) {
       p.uiState.selected = p.id === player.id;

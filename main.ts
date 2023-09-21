@@ -23,9 +23,9 @@ var { getCurrentContext } = ContextKeeper();
 // Ephemeral state
 var prob;
 var urlStore;
-var fileInput: HTMLInputElement = document.getElementById(
-  'file'
-) as HTMLInputElement;
+// var fileInput: HTMLInputElement = document.getElementById(
+//   'file'
+// ) as HTMLInputElement;
 var players: Player[] = [];
 
 (async function go() {
@@ -49,7 +49,7 @@ async function onUpdate(
   players = ((state.players as unknown[]) || [])
     .map(fixPlayer)
     .map(addPlayerMethods);
-  console.log('Deserialized players:', players);
+  // console.log('Deserialized players:', players);
   // players[0].uiState.selected = true;
   // console.log('Deserialized players:', players);
   var random = seedrandom(state.seed);
@@ -82,16 +82,18 @@ async function onUpdate(
     handleError(error);
   }
 
-  wireControls({ onFileChange, onAddPlayer, onPlay });
+  wireControls({ /*onFileChange,*/ onAddPlayer, onPlay });
   renderBoard({ players, onUpdatePlayers });
 }
 
-function onUpdatePlayers() {
-  urlStore.update({ players });
+function onUpdatePlayers(updatedPlayers) {
+  // players uiState is wrong on the second click here.
+  // So what is onClickPlayer updating?
+  urlStore.update({ players: updatedPlayers });
 }
 
-function wireControls({ onFileChange, onAddPlayer, onPlay }) {
-  on('#file', 'change', onFileChange);
+function wireControls({ /*onFileChange,*/ onAddPlayer, onPlay }) {
+  // on('#file', 'change', onFileChange);
   on('#add-button', 'click', onAddPlayer);
   on('#play-button', 'click', onPlay);
 }
@@ -129,20 +131,20 @@ function playToOthers(sender: Player, event: MusicEvent) {
   );
 }
 
-async function onFileChange() {
-  if (!fileInput?.files?.length) {
-    return;
-  }
+// async function onFileChange() {
+//   if (!fileInput?.files?.length) {
+//     return;
+//   }
 
-  //   try {
-  //     srcAudioBuffer = await getAudioBufferFromFile({
-  //       file: fileInput.files[0],
-  //     });
-  //     // TODO: Impl. urlStore ephemeral state, put it thes.
-  //   } catch (error) {
-  //     handleError(error);
-  //   }
-}
+//   //   try {
+//   //     srcAudioBuffer = await getAudioBufferFromFile({
+//   //       file: fileInput.files[0],
+//   //     });
+//   //     // TODO: Impl. urlStore ephemeral state, put it thes.
+//   //   } catch (error) {
+//   //     handleError(error);
+//   //   }
+// }
 
 function onPlay() {
   var selectedPlayers = (players as Player[]).filter(

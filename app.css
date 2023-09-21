@@ -99,6 +99,11 @@ a:visited {
   color: white;
 }
 
+.selected circle {
+  stroke-width: 1;
+  stroke: hsl(210, 80%, 50%);
+}
+
 @media all and (max-height: 568px) {
   body {
     font-size: 18px;
