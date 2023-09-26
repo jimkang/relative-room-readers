@@ -28,4 +28,5 @@ export interface MusicEvent {
   pitch: number;
   lengthSeconds: number;
   metaMessage: string;
+  pan: number;
 }

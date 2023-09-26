@@ -118,7 +118,7 @@ function onAddPlayer() {
         position: { x: 25, y: 25 },
         uiState: { selected: false },
         sampleIndex: 0,
-        pan: 0,
+        pan: prob.pick([-1, 1]),
         amp: 0.5,
         evaluationWindowSizeInEvents: 4,
         responseStrategyName: 'echo',
@@ -130,7 +130,7 @@ function onAddPlayer() {
   urlStore.update({ players });
 }
 
-function playToOthers(sender: Player, event: MusicEvent) {
+function broadcast(sender: Player, event: MusicEvent) {
   var others = (players as Player[]).filter(
     (player) => player.id !== sender.id
   );
@@ -140,6 +140,8 @@ function playToOthers(sender: Player, event: MusicEvent) {
       timeForDistance(sender, player)
     )
   );
+  // Send it to yourself, too.
+  sender.hear(sender, event);
 }
 
 // async function onFileChange() {
@@ -183,10 +185,14 @@ function fixPlayer(player) {
 function addPlayerMethods(player) {
   return Object.assign(player, {
     async hear(you: Player, e: MusicEvent) {
-      you.evaluationWindow.push(e);
-      if (you.evaluationWindow.length >= you.evaluationWindowSizeInEvents) {
-        you.respond(you, you.evaluationWindow);
-        you.evaluationWindow.length = 0;
+      // Don't respond to yourself in order to prevent an infinite loop.
+      if (you.id !== e.senderId) {
+        // TODO: evaluation window needs to either stack for multiple senders or have a sense of time.
+        you.evaluationWindow.push(e);
+        if (you.evaluationWindow.length >= you.evaluationWindowSizeInEvents) {
+          you.respond(you, you.evaluationWindow);
+          you.evaluationWindow.length = 0;
+        }
       }
       console.log(you.id, 'heard', e);
       if (you.uiState.selected) {
@@ -195,7 +201,6 @@ function addPlayerMethods(player) {
             scoreEvent: scoreEventForMusicEvent({
               musicEvent: e,
               variableSampleIndex: you.sampleIndex || 0,
-              pan: player.pan,
             }),
             sampleBuffer: null,
             variableSampleBuffers: sampleBuffers,
@@ -215,7 +220,7 @@ function addPlayerMethods(player) {
     respond(you: Player, events: MusicEvent[]) {
       if (you.responseStrategyName === 'echo') {
         // TODO: Timing.
-        events.forEach((event) => playToOthers(you, event));
+        events.forEach((event) => broadcast(you, event));
       }
     },
     start(you: Player) {
@@ -225,10 +230,11 @@ function addPlayerMethods(player) {
         .map((pitch) => ({
           senderId: you.id,
           pitch,
-          lengthSeconds: 0.5,
+          lengthSeconds: 2,
           metaMessage: 'Start bar',
+          pan: you.pan,
         }));
-      events.forEach((event) => playToOthers(you, event));
+      events.forEach((event) => broadcast(you, event));
     },
   });
 }
@@ -243,7 +249,7 @@ function getLabel(index) {
 
 function timeForDistance(a: Player, b: Player) {
   return (
-    10 *
+    100 *
     math.getVectorMagnitude(
       math.subtractPairs(
         [a.position.x, a.position.y],
@@ -256,11 +262,9 @@ function timeForDistance(a: Player, b: Player) {
 function scoreEventForMusicEvent({
   musicEvent,
   variableSampleIndex,
-  pan,
 }: {
   musicEvent: MusicEvent;
   variableSampleIndex: number;
-  pan: number;
 }): ScoreEvent {
   return {
     rate: musicEvent.pitch,
@@ -268,7 +272,7 @@ function scoreEventForMusicEvent({
     peakGain: 0.5,
     variableSampleIndex,
     absoluteLengthSeconds: musicEvent.lengthSeconds,
-    pan,
+    pan: musicEvent.pan,
   };
 }
 
