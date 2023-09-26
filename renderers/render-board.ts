@@ -22,10 +22,11 @@ export function renderBoard({
   playerRadius?: number;
 }) {
   // var posLastUpdatedTime = 0.0;
-  var applyDragBehavior = drag().container(boardSel.node());
-  // To avoid conflicts with click events, do this
-  // update after a delay.
-  // .on('end', () => setTimeout(onUpdatePlayers, 300))
+  var applyDragBehavior = drag()
+    .container(boardSel.node())
+    // To avoid conflicts with click events, do this
+    // update after a delay.
+    .on('end', onUpdatePlayers);
 
   var playerRoot = select(`.${className}-root`);
   var playerSel = playerRoot

@@ -12,8 +12,18 @@ import { Player, MusicEvent } from './types';
 import { range } from 'd3-array';
 import { downloadSamples } from 'synthskel/tasks/download-samples';
 import math from 'basic-2d-math';
-import { tonalityDiamondPitches } from 'synthskel/tonality-diamond';
+import { TonalityDiamond } from 'synthskel/tonality-diamond';
+import { ScoreEvent } from 'synthskel/types';
+import { SynthNode } from 'synthskel/synths/synth-node';
+import {
+  newPlayEventForScoreEvent,
+  playPlayEvent,
+} from 'synthskel/tasks/play-event';
+import { MainOut } from 'synthskel/synths/main-out';
 
+var { pitches: tonalityDiamondPitches } = TonalityDiamond({ diamondLimit: 5 });
+
+var envelopeCurve = new Float32Array([0, 0.5, 1]);
 const abc = 'abcdefghijklmnopqrstuvwxyz';
 var sampleBuffers: AudioBuffer[];
 var randomId = RandomId();
@@ -27,6 +37,7 @@ var urlStore;
 //   'file'
 // ) as HTMLInputElement;
 var players: Player[] = [];
+var mainOutNode;
 
 (async function go() {
   window.addEventListener('error', reportTopLevelError);
@@ -58,9 +69,7 @@ async function onUpdate(
 
   var ctx;
   try {
-    ctx = await new Promise((resolve, reject) =>
-      getCurrentContext((error, ctx) => (error ? reject(error) : resolve(ctx)))
-    );
+    ctx = await getContextPromise();
     if (!sampleBuffers || sampleBuffers.length < 1) {
       sampleBuffers = await new Promise((resolve, reject) =>
         downloadSamples(
@@ -78,6 +87,8 @@ async function onUpdate(
         )
       );
     }
+
+    mainOutNode = MainOut({ ctx, totalSeconds: 60 });
   } catch (error) {
     handleError(error);
   }
@@ -171,13 +182,35 @@ function fixPlayer(player) {
 
 function addPlayerMethods(player) {
   return Object.assign(player, {
-    hear(you: Player, e: MusicEvent) {
+    async hear(you: Player, e: MusicEvent) {
       you.evaluationWindow.push(e);
       if (you.evaluationWindow.length >= you.evaluationWindowSizeInEvents) {
         you.respond(you, you.evaluationWindow);
         you.evaluationWindow.length = 0;
       }
       console.log(you.id, 'heard', e);
+      if (you.uiState.selected) {
+        try {
+          let playEvent = newPlayEventForScoreEvent({
+            scoreEvent: scoreEventForMusicEvent({
+              musicEvent: e,
+              variableSampleIndex: you.sampleIndex || 0,
+              pan: player.pan,
+            }),
+            sampleBuffer: null,
+            variableSampleBuffers: sampleBuffers,
+            ctx: await getContextPromise(),
+            tickLength: 1,
+            slideMode: false,
+            envelopeCurve,
+            getEnvelopeLengthForScoreEvent: null,
+          });
+          connectLastToDest({ chain: playEvent.nodes, dest: mainOutNode });
+          playPlayEvent({ playEvent, startTime: 0 });
+        } catch (error) {
+          handleError(error);
+        }
+      }
     },
     respond(you: Player, events: MusicEvent[]) {
       if (you.responseStrategyName === 'echo') {
@@ -218,6 +251,48 @@ function timeForDistance(a: Player, b: Player) {
       )
     )
   );
+}
+
+function scoreEventForMusicEvent({
+  musicEvent,
+  variableSampleIndex,
+  pan,
+}: {
+  musicEvent: MusicEvent;
+  variableSampleIndex: number;
+  pan: number;
+}): ScoreEvent {
+  return {
+    rate: musicEvent.pitch,
+    delay: 0,
+    peakGain: 0.5,
+    variableSampleIndex,
+    absoluteLengthSeconds: musicEvent.lengthSeconds,
+    pan,
+  };
+}
+
+function getContextPromise() {
+  return new Promise((resolve, reject) =>
+    getCurrentContext((error, ctx) => (error ? reject(error) : resolve(ctx)))
+  );
+}
+
+// TODO: Move to synthskel
+function connectLastToDest({
+  chain,
+  dest,
+}: {
+  chain: SynthNode[];
+  dest: SynthNode;
+}) {
+  // TODO: Connect to limiter instead.
+  if (chain.length > 0) {
+    chain[chain.length - 1].connect({
+      synthNode: dest,
+      audioNode: null,
+    });
+  }
 }
 
 function reportTopLevelError(event: ErrorEvent) {
