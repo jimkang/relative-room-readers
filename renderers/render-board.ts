@@ -26,6 +26,7 @@ export function renderBoard({
     .container(boardSel.node())
     // To avoid conflicts with click events, do this
     // update after a delay.
+    .on('drag', updatePlayerPosition)
     .on('end', onUpdatePlayers);
 
   var playerRoot = select(`.${className}-root`);
@@ -66,8 +67,7 @@ export function renderBoard({
     // to refer to `players`. If you put onClickPlayer on
     // once when the elements enter, then it will always refer to an old copy
     // of `players`, even if this function, renderBoard() is called again with a new copy.
-    .on('click', onClickPlayer)
-    .on('drag', updatePlayerPosition);
+    .on('click', onClickPlayer);
 
   currentPlayers.select('.name').text(accessor('label'));
   currentPlayers.call(applyDragBehavior);
