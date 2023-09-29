@@ -1,3 +1,5 @@
+import { SynthNode } from 'synthskel/synths/synth-node';
+
 export interface Pt {
   x: number;
   y: number;
@@ -7,7 +9,10 @@ export interface UIState {
   selected: boolean;
 }
 
-export interface Player {
+export interface Player extends PlayerData, PlayerMethods {}
+
+// Time is in seconds unless otherwise noted.
+export interface PlayerData {
   id: string;
   label: string;
   position: Pt;
@@ -18,9 +23,41 @@ export interface Player {
   evaluationWindow: MusicEvent[];
   evaluationWindowSizeInEvents: number;
   responseStrategyName?: string;
-  hear: (you: Player, event: MusicEvent) => void;
-  respond: (you: Player, events: MusicEvent[]) => void;
-  start: (you: Player) => void;
+  tickSecs: number;
+  uninterruptibleWindowLength: number;
+  lastStarted: number;
+}
+
+export interface RuntimePlayKit {
+  prob;
+  dest: SynthNode;
+  sampleBuffers: AudioBuffer[];
+  ctx: AudioContext;
+  players: Player[];
+}
+
+export interface PlayerMethods {
+  hear: ({
+    you,
+    event,
+    kit,
+  }: {
+    you: Player;
+    event: MusicEvent;
+    kit: RuntimePlayKit;
+  }) => void;
+
+  respond: ({
+    you,
+    events,
+    kit,
+  }: {
+    you: Player;
+    events: MusicEvent[];
+    kit: RuntimePlayKit;
+  }) => void;
+
+  start: ({ you, kit }: { you: Player; kit: RuntimePlayKit }) => void;
 }
 
 export interface MusicEvent {
