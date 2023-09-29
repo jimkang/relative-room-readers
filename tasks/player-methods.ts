@@ -67,12 +67,25 @@ export function respond({
     if (!you.lastStarted) {
       you.lastStarted = kit.ctx.currentTime;
     }
-    events.forEach((event) => broadcast({ sender: you, event, kit }));
+    console.log(
+      you.id,
+      'is responding to',
+      events.map((e) => e.senderId)
+    );
+    broadcastEventsInSerial({
+      sender: you,
+      events: events.map(copyEvent),
+      kit,
+    });
     const totalEventSeconds = events.reduce(
       (total, event) => total + event.lengthSeconds,
       0
     );
     setTimeout(() => (you.lastStarted = 0), totalEventSeconds * 1000);
+  }
+
+  function copyEvent(event) {
+    return Object.assign({}, event, { senderId: you.id });
   }
 }
 
@@ -87,11 +100,23 @@ export function start({ you, kit }: { you: Player; kit: RuntimePlayKit }) {
       metaMessage: 'Start bar',
       pan: you.pan,
     }));
+  broadcastEventsInSerial({ sender: you, events, kit });
+}
+
+function broadcastEventsInSerial({
+  sender,
+  events,
+  kit,
+}: {
+  sender: Player;
+  events: MusicEvent[];
+  kit: RuntimePlayKit;
+}) {
   var nextStartTimeSecs = 0;
   for (let i = 0; i < events.length; ++i) {
     let event = events[i];
     setTimeout(
-      () => broadcast({ sender: you, event, kit }),
+      () => broadcast({ sender, event, kit }),
       nextStartTimeSecs * 1000
     );
     nextStartTimeSecs += event.lengthSeconds;

@@ -19,8 +19,9 @@ var randomId = RandomId();
 var { on } = OLPE();
 var { getCurrent } = ContextKeeper();
 
-// Ephemeral state
 var urlStore;
+
+// Ephemeral state
 // var fileInput: HTMLInputElement = document.getElementById(
 //   'file'
 // ) as HTMLInputElement;
@@ -148,7 +149,7 @@ async function onPlay() {
 
 function fixPlayer(playerData: PlayerData) {
   // TODO: Fix nested object bug in url-store.
-  return Object.assign(playerData, {
+  Object.assign(playerData, {
     position: {
       x: +(playerData?.position?.x || 0),
       y: +(playerData?.position?.y || 0),
@@ -158,6 +159,23 @@ function fixPlayer(playerData: PlayerData) {
     },
     evaluationWindow: [],
   });
+  [
+    'sampleIndex',
+    'pan',
+    'amp',
+    'evaluationWindowSizeInEvents',
+    'tickSecs',
+    'uninterruptibleWindowLength',
+    'lastStarted',
+  ].forEach(setNumberProp);
+
+  return playerData;
+
+  function setNumberProp(prop) {
+    if (prop in playerData) {
+      playerData[prop] = +playerData[prop];
+    }
+  }
 }
 
 function addPlayerMethods(playerData: PlayerData): Player {
