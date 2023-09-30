@@ -1,5 +1,5 @@
 import './app.css';
-import { Player, PlayerData, RuntimePlayKit } from './types';
+import { PlayerData, RuntimePlayKit } from './types';
 import { range } from 'd3-array';
 import { URLStore } from '@jimkang/url-store';
 import handleError from 'handle-error-web';
@@ -10,9 +10,14 @@ import { createProbable as Probable } from 'probable';
 import OLPE from 'one-listener-per-element';
 import ContextKeeper from 'audio-context-singleton';
 import { renderBoard } from './renderers/render-board';
+import {
+  renderHashField,
+  getHashFieldObject,
+} from './renderers/render-hash-field';
 import { downloadSamples } from 'synthskel/tasks/download-samples';
 import { MainOut } from 'synthskel/synths/main-out';
-import { hear, respond, start } from './tasks/player-methods';
+import { updatePlayers } from './updaters/update-players';
+import { fixPlayer, addPlayerMethods } from './tasks/player-methods';
 
 const abc = 'abcdefghijklmnopqrstuvwxyz';
 var randomId = RandomId();
@@ -53,24 +58,31 @@ async function onUpdate(
   //  ephemeralState: Record<string, unknown>
 ) {
   var random = seedrandom(state.seed);
-  (kit.prob = Probable({ random })),
-  (kit.players = ((state.players as PlayerData[]) || [])
-    .map(fixPlayer)
-    .map(addPlayerMethods));
-  wireControls({ /*onFileChange,*/ onAddPlayer, onPlay });
+  kit.prob = Probable({ random });
+
+  if (state.players) {
+    updatePlayers({ kit, playerData: state.players as PlayerData[] });
+  }
+
+  wireControls({ /*onFileChange,*/ onAddPlayer, onPlay, onSetHash });
   renderBoard({ players: kit.players, onUpdatePlayers });
+  renderHashField(state);
 }
 
 function onUpdatePlayers() {
-  // players uiState is wrong on the second click here.
-  // So what is onClickPlayer updating?
+  // TODO: Make urlStore ignore some props.
   urlStore.update({ players: kit.players });
 }
 
-function wireControls({ /*onFileChange,*/ onAddPlayer, onPlay }) {
+function wireControls({ /*onFileChange,*/ onAddPlayer, onPlay, onSetHash }) {
   // on('#file', 'change', onFileChange);
   on('#add-button', 'click', onAddPlayer);
   on('#play-button', 'click', onPlay);
+  on('#set-params-button', 'click', onSetHash);
+}
+
+function onSetHash() {
+  urlStore.update(getHashFieldObject());
 }
 
 function onAddPlayer() {
@@ -143,43 +155,10 @@ async function onPlay() {
     (player) => player?.uiState?.selected
   );
   if (selectedPlayers.length > 0) {
+    // Reset lastStarted.
+    kit.players.forEach((player) => (player.lastStarted = 0));
     selectedPlayers[0].start({ you: selectedPlayers[0], kit });
   }
-}
-
-function fixPlayer(playerData: PlayerData) {
-  // TODO: Fix nested object bug in url-store.
-  Object.assign(playerData, {
-    position: {
-      x: +(playerData?.position?.x || 0),
-      y: +(playerData?.position?.y || 0),
-    },
-    uiState: {
-      selected: JSON.parse(playerData?.uiState?.selected as unknown as string),
-    },
-    evaluationWindow: [],
-  });
-  [
-    'sampleIndex',
-    'pan',
-    'amp',
-    'evaluationWindowSizeInEvents',
-    'tickSecs',
-    'uninterruptibleWindowLength',
-    'lastStarted',
-  ].forEach(setNumberProp);
-
-  return playerData;
-
-  function setNumberProp(prop) {
-    if (prop in playerData) {
-      playerData[prop] = +playerData[prop];
-    }
-  }
-}
-
-function addPlayerMethods(playerData: PlayerData): Player {
-  return Object.assign({ hear, respond, start }, playerData);
 }
 
 function getLabel(index) {

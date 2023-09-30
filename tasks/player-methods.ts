@@ -1,4 +1,4 @@
-import { Player, MusicEvent, RuntimePlayKit } from '../types';
+import { Player, PlayerData, MusicEvent, RuntimePlayKit } from '../types';
 import {
   newPlayEventForScoreEvent,
   playPlayEvent,
@@ -7,6 +7,7 @@ import { TonalityDiamond } from 'synthskel/tonality-diamond';
 import math from 'basic-2d-math';
 import { ScoreEvent } from 'synthskel/types';
 import { SynthNode } from 'synthskel/synths/synth-node';
+import { range } from 'd3-array';
 
 var { pitches: tonalityDiamondPitches } = TonalityDiamond({ diamondLimit: 5 });
 var envelopeCurve = new Float32Array([0, 0.5, 1]);
@@ -90,16 +91,19 @@ export function respond({
 }
 
 export function start({ you, kit }: { you: Player; kit: RuntimePlayKit }) {
-  var events = kit.prob
+  var riffPitches = kit.prob
     .shuffle(tonalityDiamondPitches.slice(0, 8))
-    .slice(0, 4)
-    .map((pitch) => ({
-      senderId: you.id,
-      pitch,
-      lengthSeconds: 2,
-      metaMessage: 'Start bar',
-      pan: you.pan,
-    }));
+    .slice(0, 4);
+  var riff = range(4)
+    .map(() => riffPitches)
+    .flat();
+  var events = riff.map((pitch) => ({
+    senderId: you.id,
+    pitch,
+    lengthSeconds: 2,
+    metaMessage: 'Start bar',
+    pan: you.pan,
+  }));
   broadcastEventsInSerial({ sender: you, events, kit });
 }
 
@@ -163,15 +167,14 @@ function connectLastToDest({
 }
 
 function timeForDistance(a: Player, b: Player) {
-  return (
-    100 *
-    math.getVectorMagnitude(
-      math.subtractPairs(
-        [a.position.x, a.position.y],
-        [b.position.x, b.position.y]
-      )
+  const distance = math.getVectorMagnitude(
+    math.subtractPairs(
+      [a.position.x, a.position.y],
+      [b.position.x, b.position.y]
     )
   );
+  console.log(a.id, 'to', b.id, 'distance:', distance);
+  return 100 * distance;
 }
 
 function scoreEventForMusicEvent({
@@ -189,4 +192,39 @@ function scoreEventForMusicEvent({
     absoluteLengthSeconds: musicEvent.lengthSeconds,
     pan: musicEvent.pan,
   };
+}
+
+export function fixPlayer(playerData: PlayerData) {
+  // TODO: Fix nested object bug in url-store.
+  Object.assign(playerData, {
+    position: {
+      x: +(playerData?.position?.x || 0),
+      y: +(playerData?.position?.y || 0),
+    },
+    uiState: {
+      selected: JSON.parse(playerData?.uiState?.selected as unknown as string),
+    },
+    evaluationWindow: [],
+  });
+  [
+    'sampleIndex',
+    'pan',
+    'amp',
+    'evaluationWindowSizeInEvents',
+    'tickSecs',
+    'uninterruptibleWindowLength',
+    'lastStarted',
+  ].forEach(setNumberProp);
+
+  return playerData;
+
+  function setNumberProp(prop) {
+    if (prop in playerData) {
+      playerData[prop] = +playerData[prop];
+    }
+  }
+}
+
+export function addPlayerMethods(playerData: PlayerData): Player {
+  return Object.assign({ hear, respond, start }, playerData);
 }

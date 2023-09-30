@@ -13,8 +13,10 @@ build:
 	npm run build
 
 sync:
-	rsync -a $(HOMEDIR)/dist/ $(USER)@$(SERVER):/$(APPDIR) \
+	rsync -avz $(HOMEDIR)/dist/ $(USER)@$(SERVER):/$(APPDIR) \
     --exclude node_modules/
+sync-samples:
+	rsync -avz $(HOMEDIR)/samples $(USER)@$(SERVER):/$(APPDIR)
 
 set-up-server-dir:
 	ssh $(USER)@$(SERVER) "mkdir -p $(APPDIR)"
