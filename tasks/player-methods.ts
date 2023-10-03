@@ -73,28 +73,40 @@ export function respond({
   events: MusicEvent[];
   kit: RuntimePlayKit;
 }) {
-  if (you.responseStrategyName === 'echo') {
-    console.log(
-      you.label,
-      'is responding to',
-      events.length,
-      'events:',
-      events.map((e) => e.senderId)
-    );
-    broadcastEventsInSerial({
-      sender: you,
-      events: events.map(copyEventForYou),
-      kit,
-    });
-    const totalEventSeconds = events.reduce(
-      (total, event) => total + event.lengthSeconds,
-      0
-    );
-    if (!you.canNextRespondAtTime) {
-      you.canNextRespondAtTime = kit.ctx.currentTime + totalEventSeconds;
-    }
-    setTimeout(() => (you.canNextRespondAtTime = 0), totalEventSeconds * 1000);
+  console.log(
+    you.label,
+    'is responding to',
+    events.length,
+    'events:',
+    events.map((e) => e.senderId)
+  );
+  var responseEvents: MusicEvent[] = [];
+  const responseStrategyName = kit.prob.pick(you.responseStrategyNames);
+  if (responseStrategyName === 'echo') {
+    responseEvents = events.map(copyEventForYou);
+  } else if (responseStrategyName === 'harmonize') {
+    responseEvents = events
+      .map(copyEventForYou)
+      .map((event) =>
+        shiftPitch(event, kit.prob.pick([0.5, 1 / 1.33, 1.33, 2]))
+      );
+  } else {
+    throw new Error('No responseStrategyName.');
   }
+
+  broadcastEventsInSerial({
+    sender: you,
+    events: responseEvents,
+    kit,
+  });
+  const totalEventSeconds = responseEvents.reduce(
+    (total, event) => total + event.lengthSeconds,
+    0
+  );
+  if (!you.canNextRespondAtTime) {
+    you.canNextRespondAtTime = kit.ctx.currentTime + totalEventSeconds;
+  }
+  setTimeout(() => (you.canNextRespondAtTime = 0), totalEventSeconds * 1000);
 
   function copyEventForYou(event) {
     return Object.assign({}, event, {
@@ -241,6 +253,11 @@ export function fixPlayer(playerData: PlayerData) {
       playerData[prop] = +playerData[prop];
     }
   }
+}
+
+function shiftPitch(event: MusicEvent, multiplier: number) {
+  event.pitch *= multiplier;
+  return event;
 }
 
 export function addPlayerMethods(playerData: PlayerData): Player {

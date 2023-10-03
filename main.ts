@@ -97,10 +97,9 @@ function onAddPlayer() {
         pan: kit.prob.pick([-1, 1]),
         amp: 0.5,
         evaluationWindowSizeInEvents: 4,
-        responseStrategyName: 'echo',
+        responseStrategyNames: ['echo'],
         evaluationWindow: [],
         tickSecs: 0.5,
-        uninterruptibleWindowLength: 1,
         canNextRespondAtTime: 0,
       })
     )

@@ -22,7 +22,7 @@ export interface PlayerData {
   amp: number;
   evaluationWindow: MusicEvent[];
   evaluationWindowSizeInEvents: number;
-  responseStrategyName?: string;
+  responseStrategyNames?: string[];
   tickSecs: number;
   // uninterruptibleWindowLength: number;
   canNextRespondAtTime: number;
