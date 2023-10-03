@@ -26,6 +26,7 @@ export interface PlayerData {
   tickSecs: number;
   // uninterruptibleWindowLength: number;
   canNextRespondAtTime: number;
+  stopped?: boolean;
 }
 
 export interface RuntimePlayKit {

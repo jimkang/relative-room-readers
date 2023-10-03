@@ -9,8 +9,6 @@ import { ScoreEvent } from 'synthskel/types';
 import { SynthNode } from 'synthskel/synths/synth-node';
 import { range } from 'd3-array';
 
-const maxResponseEvents = 8;
-
 var { pitches: tonalityDiamondPitches } = TonalityDiamond({ diamondLimit: 5 });
 var envelopeCurve = new Float32Array([0, 0.5, 1, 1, 1, 1, 1, 1, 0.5, 0.1]);
 
@@ -27,7 +25,10 @@ export async function hear({
   if (you.id !== event.senderId) {
     // TODO: evaluation window needs to either stack for multiple senders or have a sense of time.
     you.evaluationWindow.push(event);
-    if (you.evaluationWindow.length >= you.evaluationWindowSizeInEvents) {
+    if (
+      !you.stopped &&
+      you.evaluationWindow.length >= you.evaluationWindowSizeInEvents
+    ) {
       if (
         kit.ctx.currentTime >= you.canNextRespondAtTime
         // kit.ctx.currentTime - you.canNextRespondAtTime >
@@ -35,7 +36,10 @@ export async function hear({
       ) {
         you.respond({
           you,
-          events: you.evaluationWindow.slice(0, maxResponseEvents),
+          events: you.evaluationWindow.slice(
+            0,
+            getNumberOfEventsToRespondTo(you.evaluationWindow.length)
+          ),
           kit,
         });
         you.evaluationWindow.length = 0;
@@ -87,9 +91,7 @@ export function respond({
   } else if (responseStrategyName === 'harmonize') {
     responseEvents = events
       .map(copyEventForYou)
-      .map((event) =>
-        shiftPitch(event, kit.prob.pick([0.5, 1 / 1.33, 1.33, 2]))
-      );
+      .map((event) => shiftPitch(event, kit.prob.pick([0.5, 0.75, 1.5, 2])));
   } else {
     throw new Error('No responseStrategyName.');
   }
@@ -258,6 +260,13 @@ export function fixPlayer(playerData: PlayerData) {
 function shiftPitch(event: MusicEvent, multiplier: number) {
   event.pitch *= multiplier;
   return event;
+}
+
+function getNumberOfEventsToRespondTo(eventCount: number) {
+  if (eventCount < 8) {
+    return eventCount;
+  }
+  return 8 + (eventCount - 8) / 4;
 }
 
 export function addPlayerMethods(playerData: PlayerData): Player {

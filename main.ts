@@ -64,7 +64,7 @@ async function onUpdate(
     updatePlayers({ kit, playerData: state.players as PlayerData[] });
   }
 
-  wireControls({ /*onFileChange,*/ onAddPlayer, onPlay, onSetHash });
+  wireControls({ /*onFileChange,*/ onAddPlayer, onPlay, onSetHash, onStop });
   renderBoard({ players: kit.players, onUpdatePlayers });
   renderHashField(state);
 }
@@ -74,11 +74,17 @@ function onUpdatePlayers() {
   urlStore.update({ players: kit.players });
 }
 
-function wireControls({ /*onFileChange,*/ onAddPlayer, onPlay, onSetHash }) {
+function wireControls({
+  /*onFileChange,*/ onAddPlayer,
+  onPlay,
+  onSetHash,
+  onStop,
+}) {
   // on('#file', 'change', onFileChange);
   on('#add-button', 'click', onAddPlayer);
   on('#play-button', 'click', onPlay);
   on('#set-params-button', 'click', onSetHash);
+  on('#stop-button', 'click', onStop);
 }
 
 function onSetHash() {
@@ -155,9 +161,16 @@ async function onPlay() {
   );
   if (selectedPlayers.length > 0) {
     // Reset canNextRespondAtTime.
-    kit.players.forEach((player) => (player.canNextRespondAtTime = 0));
+    kit.players.forEach((player) => {
+      player.canNextRespondAtTime = 0;
+      player.stopped = false;
+    });
     selectedPlayers[0].start({ you: selectedPlayers[0], kit });
   }
+}
+
+function onStop() {
+  kit.players.forEach((player) => (player.stopped = true));
 }
 
 function getLabel(index) {
