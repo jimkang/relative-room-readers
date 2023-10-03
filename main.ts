@@ -144,6 +144,10 @@ async function onPlay() {
               'glass-less-full.wav',
               'Vibraphone.sustain.ff.D4.wav',
               'timpani-d.wav',
+              'celesta-d4.wav',
+              'tubular-bells-d.wav',
+              'viola-d3.wav',
+              'contrabassoon-d2.wav',
             ],
           },
           (error, buffers) => (error ? reject(error) : resolve(buffers))

@@ -92,6 +92,8 @@ export function respond({
     responseEvents = events
       .map(copyEventForYou)
       .map((event) => shiftPitch(event, kit.prob.pick([0.5, 0.75, 1.5, 2])));
+  } else if (responseStrategyName === 'newriff') {
+    responseEvents = newRiff({ you, kit }).slice(0, events.length);
   } else {
     throw new Error('No responseStrategyName.');
   }
@@ -106,6 +108,7 @@ export function respond({
     0
   );
   if (!you.canNextRespondAtTime) {
+    // Let the player start the next response a little before their own response is over.
     you.canNextRespondAtTime = kit.ctx.currentTime + totalEventSeconds;
   }
   setTimeout(() => (you.canNextRespondAtTime = 0), totalEventSeconds * 1000);
@@ -121,22 +124,7 @@ export function respond({
 }
 
 export function start({ you, kit }: { you: Player; kit: RuntimePlayKit }) {
-  var riffPitches = kit.prob
-    .shuffle(tonalityDiamondPitches.slice(0, 7))
-    .slice(0, 4);
-  var riff = range(4)
-    .map(() => riffPitches)
-    .flat();
-  var events = riff.map((pitch) => ({
-    senderId: you.id,
-    pitch,
-    lengthSeconds: 2,
-    metaMessage: 'Start bar',
-    pan: you.pan,
-    sampleIndex: you.sampleIndex,
-    amp: you.amp,
-  }));
-  broadcastEventsInSerial({ sender: you, events, kit });
+  broadcastEventsInSerial({ sender: you, events: newRiff({ you, kit }), kit });
 }
 
 function broadcastEventsInSerial({
@@ -196,6 +184,24 @@ function connectLastToDest({
       audioNode: null,
     });
   }
+}
+
+function newRiff({ kit, you }) {
+  var riffPitches = kit.prob
+    .shuffle(tonalityDiamondPitches.slice(0, 7))
+    .slice(0, 3 + kit.prob.roll(3));
+  var riff = range(4 + kit.prob.roll(4))
+    .map(() => riffPitches)
+    .flat();
+  return riff.map((pitch) => ({
+    senderId: you.id,
+    pitch,
+    lengthSeconds: kit.prob.pick([2, 2, 1.5 * kit.prob.rollDie(4), 1, 0.5]),
+    metaMessage: 'Start bar',
+    pan: you.pan,
+    sampleIndex: you.sampleIndex,
+    amp: you.amp,
+  }));
 }
 
 function timeForDistance(a: Player, b: Player) {
@@ -266,7 +272,7 @@ function getNumberOfEventsToRespondTo(eventCount: number) {
   if (eventCount < 8) {
     return eventCount;
   }
-  return 8 + (eventCount - 8) / 4;
+  return Math.round(8 + (eventCount - 8) / 10);
 }
 
 export function addPlayerMethods(playerData: PlayerData): Player {
