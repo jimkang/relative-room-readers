@@ -101,7 +101,7 @@ function onAddPlayer() {
         evaluationWindow: [],
         tickSecs: 0.5,
         uninterruptibleWindowLength: 1,
-        lastStarted: 0,
+        canNextRespondAtTime: 0,
       })
     )
   );
@@ -137,8 +137,8 @@ async function onPlay() {
             sampleFiles: [
               'trumpet-D2.wav',
               'glass-less-full.wav',
-              'timpani-d.wav',
               'Vibraphone.sustain.ff.D4.wav',
+              'timpani-d.wav',
             ],
           },
           (error, buffers) => (error ? reject(error) : resolve(buffers))
@@ -155,8 +155,8 @@ async function onPlay() {
     (player) => player?.uiState?.selected
   );
   if (selectedPlayers.length > 0) {
-    // Reset lastStarted.
-    kit.players.forEach((player) => (player.lastStarted = 0));
+    // Reset canNextRespondAtTime.
+    kit.players.forEach((player) => (player.canNextRespondAtTime = 0));
     selectedPlayers[0].start({ you: selectedPlayers[0], kit });
   }
 }

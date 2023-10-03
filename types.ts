@@ -24,8 +24,8 @@ export interface PlayerData {
   evaluationWindowSizeInEvents: number;
   responseStrategyName?: string;
   tickSecs: number;
-  uninterruptibleWindowLength: number;
-  lastStarted: number;
+  // uninterruptibleWindowLength: number;
+  canNextRespondAtTime: number;
 }
 
 export interface RuntimePlayKit {
@@ -66,4 +66,6 @@ export interface MusicEvent {
   lengthSeconds: number;
   metaMessage: string;
   pan: number;
+  sampleIndex?: number;
+  amp: number;
 }

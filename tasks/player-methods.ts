@@ -9,8 +9,10 @@ import { ScoreEvent } from 'synthskel/types';
 import { SynthNode } from 'synthskel/synths/synth-node';
 import { range } from 'd3-array';
 
+const maxResponseEvents = 8;
+
 var { pitches: tonalityDiamondPitches } = TonalityDiamond({ diamondLimit: 5 });
-var envelopeCurve = new Float32Array([0, 0.5, 1]);
+var envelopeCurve = new Float32Array([0, 0.5, 1, 1, 1, 1, 1, 1, 0.5, 0.1]);
 
 export async function hear({
   you,
@@ -27,11 +29,18 @@ export async function hear({
     you.evaluationWindow.push(event);
     if (you.evaluationWindow.length >= you.evaluationWindowSizeInEvents) {
       if (
-        kit.ctx.currentTime - you.lastStarted >
-        you.uninterruptibleWindowLength
+        kit.ctx.currentTime >= you.canNextRespondAtTime
+        // kit.ctx.currentTime - you.canNextRespondAtTime >
+        // you.uninterruptibleWindowLength
       ) {
-        you.respond({ you, events: you.evaluationWindow, kit });
+        you.respond({
+          you,
+          events: you.evaluationWindow.slice(0, maxResponseEvents),
+          kit,
+        });
         you.evaluationWindow.length = 0;
+      } else {
+        console.log(you.label, 'is too busy to respond');
       }
     }
   }
@@ -40,7 +49,7 @@ export async function hear({
     let playEvent = newPlayEventForScoreEvent({
       scoreEvent: scoreEventForMusicEvent({
         musicEvent: event,
-        variableSampleIndex: you.sampleIndex || 0,
+        variableSampleIndex: event.sampleIndex || 0,
       }),
       sampleBuffer: null,
       variableSampleBuffers: kit.sampleBuffers,
@@ -65,34 +74,41 @@ export function respond({
   kit: RuntimePlayKit;
 }) {
   if (you.responseStrategyName === 'echo') {
-    if (!you.lastStarted) {
-      you.lastStarted = kit.ctx.currentTime;
-    }
     console.log(
-      you.id,
+      you.label,
       'is responding to',
+      events.length,
+      'events:',
       events.map((e) => e.senderId)
     );
     broadcastEventsInSerial({
       sender: you,
-      events: events.map(copyEvent),
+      events: events.map(copyEventForYou),
       kit,
     });
     const totalEventSeconds = events.reduce(
       (total, event) => total + event.lengthSeconds,
       0
     );
-    setTimeout(() => (you.lastStarted = 0), totalEventSeconds * 1000);
+    if (!you.canNextRespondAtTime) {
+      you.canNextRespondAtTime = kit.ctx.currentTime + totalEventSeconds;
+    }
+    setTimeout(() => (you.canNextRespondAtTime = 0), totalEventSeconds * 1000);
   }
 
-  function copyEvent(event) {
-    return Object.assign({}, event, { senderId: you.id });
+  function copyEventForYou(event) {
+    return Object.assign({}, event, {
+      senderId: you.id,
+      sampleIndex: you.sampleIndex,
+      amp: you.amp,
+      pan: you.pan,
+    });
   }
 }
 
 export function start({ you, kit }: { you: Player; kit: RuntimePlayKit }) {
   var riffPitches = kit.prob
-    .shuffle(tonalityDiamondPitches.slice(0, 8))
+    .shuffle(tonalityDiamondPitches.slice(0, 7))
     .slice(0, 4);
   var riff = range(4)
     .map(() => riffPitches)
@@ -103,6 +119,8 @@ export function start({ you, kit }: { you: Player; kit: RuntimePlayKit }) {
     lengthSeconds: 2,
     metaMessage: 'Start bar',
     pan: you.pan,
+    sampleIndex: you.sampleIndex,
+    amp: you.amp,
   }));
   broadcastEventsInSerial({ sender: you, events, kit });
 }
@@ -187,7 +205,7 @@ function scoreEventForMusicEvent({
   return {
     rate: musicEvent.pitch,
     delay: 0,
-    peakGain: 0.5,
+    peakGain: 0.5 * musicEvent.amp,
     variableSampleIndex,
     absoluteLengthSeconds: musicEvent.lengthSeconds,
     pan: musicEvent.pan,
@@ -212,8 +230,8 @@ export function fixPlayer(playerData: PlayerData) {
     'amp',
     'evaluationWindowSizeInEvents',
     'tickSecs',
-    'uninterruptibleWindowLength',
-    'lastStarted',
+    // 'uninterruptibleWindowLength',
+    'canNextRespondAtTime',
   ].forEach(setNumberProp);
 
   return playerData;
