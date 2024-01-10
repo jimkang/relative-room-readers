@@ -30,6 +30,6 @@
     "one-listener-per-element": "^1.0.1",
     "probable": "^2.1.4",
     "seedrandom": "^3.0.5",
-    "synthskel": "^1.1.1"
+    "synthskel": "^2.0.0"
   }
 }

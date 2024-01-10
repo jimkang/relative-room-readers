@@ -3,13 +3,15 @@ import {
   newPlayEventForScoreEvent,
   playPlayEvent,
 } from 'synthskel/tasks/play-event';
-import { TonalityDiamond } from 'synthskel/tonality-diamond';
+import { getTonalityDiamond } from 'synthskel/tonality-diamond';
 import math from 'basic-2d-math';
 import { ScoreEvent } from 'synthskel/types';
 import { SynthNode } from 'synthskel/synths/synth-node';
 import { range } from 'd3-array';
 
-var { pitches: tonalityDiamondPitches } = TonalityDiamond({ diamondLimit: 5 });
+var { pitches: tonalityDiamondPitches } = getTonalityDiamond({
+  diamondLimit: 9,
+});
 var envelopeCurve = new Float32Array([0, 0.5, 1, 1, 1, 1, 1, 1, 0.5, 0.1]);
 
 export async function hear({
@@ -188,7 +190,7 @@ function connectLastToDest({
 
 function newRiff({ kit, you }) {
   var riffPitches = kit.prob
-    .shuffle(tonalityDiamondPitches.slice(0, 7))
+    .shuffle(tonalityDiamondPitches)
     .slice(0, 3 + kit.prob.roll(3));
   var riff = range(4 + kit.prob.roll(4))
     .map(() => riffPitches)
